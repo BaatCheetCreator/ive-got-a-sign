@@ -1,8 +1,8 @@
 // src/App.jsx
 import { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient'; // Ensure this file exists and is correct
-import { getSunSign, getMoonSign, messages } from './astroUtils'; // Ensure this file exists and exports needed items
-import './App.css'; // Ensure this file exists
+import { getSunSign, getMoonSign, messages as astroMessages } from './astroUtils'; // Make sure astroUtils.js exists and exports these
+import './App.css'; // Make sure App.css exists
 
 // --- React App Component ---
 
@@ -11,6 +11,8 @@ function App() {
   const [session, setSession] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [dob, setDob] = useState('');
+  const [birthTime, setBirthTime] = useState('');
+  const [birthLocation, setBirthLocation] = useState('');
   const [astroResult, setAstroResult] = useState('');
   const [astroResultText, setAstroResultText] = useState('');
 
@@ -30,8 +32,11 @@ function App() {
       console.log("Auth state changed:", _event, session);
       setSession(session);
       setUserProfile(session ? (session.user.user_metadata || {}) : null);
+      // Clear all inputs and results on logout
       if (!session) {
         setDob('');
+        setBirthTime('');
+        setBirthLocation('');
         setAstroResult('');
         setAstroResultText('');
       }
@@ -48,13 +53,9 @@ function App() {
   // --- Login Handlers ---
   async function handleGoogleLogin() {
     console.log("Attempting Google login...");
+    // Using Site URL config now, removed explicit redirectTo
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        // *** THIS IS THE UPDATED LINE ***
-        // Point final redirect to your production custom domain
-        redirectTo: 'https://ive-got-a-sign.baatcheetpodcast.com/'
-      }
+      provider: 'google'
     });
     if (error) {
         console.error('Error logging in with Google:', error.message);
@@ -67,13 +68,6 @@ function App() {
   async function handleFacebookLogin() {
     // NOTE: Facebook login is currently deferred.
     alert("Facebook login is temporarily unavailable.");
-    // const { error } = await supabase.auth.signInWithOAuth({
-    //   provider: 'facebook',
-    //   options: {
-    //      redirectTo: 'https://ive-got-a-sign.baatcheetpodcast.com/' // Use production URL when re-enabled
-    //   }
-    // });
-    // if (error) console.error('Error logging in with Facebook:', error.message);
   }
 
   // --- Logout Handler ---
@@ -90,63 +84,79 @@ function App() {
 
   // --- Astro Calculation and Display ---
   function handleGenerateInsights() {
-    if (!dob) {
-      alert('Please enter your Date of Birth.');
+    // Check required inputs
+    if (!dob || !birthTime || !birthLocation) {
+      alert('Please enter Date of Birth, Time of Birth, and Place of Birth.');
       return;
     }
-    console.log('Generating insights for DOB:', dob);
+    console.log('Generating insights for DOB:', dob, 'TOB:', birthTime, 'POB:', birthLocation);
 
-    const dateObject = new Date(dob + 'T00:00:00'); // Add time to avoid timezone issues
+    const dateObject = new Date(dob + 'T00:00:00'); // Add time to avoid potential timezone day-off errors
 
-    if (isNaN(dateObject.getTime())) {
+    if (isNaN(dateObject.getTime())) { // Check if date is valid
          alert('Invalid Date entered. Please check your selection.');
          return;
     }
 
-    // Use imported functions from astroUtils.js
+    // --- Calculate Signs ---
     const sunSignResult = getSunSign(dateObject);
-    const moonSignResult = getMoonSign(dateObject);
+    const moonSignResult = getMoonSign(dateObject); // Still using simplified version
 
+    // --- TODO: Calculate Rising Sign ---
+    // Placeholder value - will be replaced by actual calculation later
+    const risingSignResult = 'Aries'; // Placeholder value (Removed "(Placeholder)" text)
+    // --- End of TODO ---
+
+    // --- Get Messages ---
     const sunMsgKey = sunSignResult.toLowerCase();
     const moonMsgKey = moonSignResult.toLowerCase();
-    const sunMessageText = messages.sun[sunMsgKey] || `Message not found for Sun sign ${sunSignResult}.`;
-    const moonMessageText = messages.moon[moonMsgKey] || `Message not found for Moon sign ${moonSignResult}.`;
-    const combinedMessageText = `Your ${sunSignResult} sun energy combines with your ${moonSignResult} moon instincts. Embrace both!`;
+    const risingMsgKey = risingSignResult.toLowerCase();
 
-    // Construct the HTML string for display
+    // Use messages from astroUtils.js (ensure it includes 'rising' messages)
+    const sunMessageText = astroMessages.sun[sunMsgKey] || `Message not found for Sun sign ${sunSignResult}.`;
+    const moonMessageText = astroMessages.moon[moonMsgKey] || `Message not found for Moon sign ${moonSignResult}.`;
+    const risingMessageText = astroMessages.rising?.[risingMsgKey] || `You approach the world with ${risingSignResult} energy!`; // Removed "(Placeholder)" text from fallback
+
+    // --- Create Combined Message ---
+    const combinedMessageText = `Your ${sunSignResult} sun energy combines with your ${moonSignResult} moon instincts and ${risingSignResult} approach. Embrace all parts of you!`;
+
+    // --- Construct HTML and Text results (Defined INSIDE the function scope) ---
     const resultHtml = `
       <div class="sign-box">
-        <h2>☀️ ${sunSignResult}</h2>
+        <h2>☀️ Sun in ${sunSignResult}</h2>
         <p>"${sunMessageText}"</p>
       </div>
       <div class="sign-box">
-        <h2>🌙 ${moonSignResult}</h2>
+        <h2>🌙 Moon in ${moonSignResult}</h2>
         <p>"${moonMessageText}"</p>
+      </div>
+      <div class="sign-box"> 
+        <h2>🌅 Rising ${risingSignResult}</h2>
+        <p>"${risingMessageText}"</p>
       </div>
       <div class="combined-message">
         <h3>🌟 Combined Wisdom:</h3>
         <p>"${combinedMessageText}"</p>
       </div>
     `;
-    setAstroResult(resultHtml); // Update HTML result state
 
-    // Generate and set Plain Text Version for Sharing/Copying
-    const plainTextResult = `My Astro Insights ✨\n\n☀️ ${sunSignResult}: "${sunMessageText}"\n\n🌙 ${moonSignResult}: "${moonMessageText}"\n\n🌟 Combined: "${combinedMessageText}"\n\n(Check yours at ive-got-a-sign.baatcheetpodcast.com !)`; // Added URL
+    const plainTextResult = `My Astro Insights ✨\n\n☀️ Sun in ${sunSignResult}: "${sunMessageText}"\n\n🌙 Moon in ${moonSignResult}: "${moonMessageText}"\n\n🌅 Rising ${risingSignResult}: "${risingMessageText}"\n\n🌟 Combined: "${combinedMessageText}"\n\n(Check yours at ive-got-a-sign.baatcheetpodcast.com !)`;
+
+    // --- Update State ---
+    setAstroResult(resultHtml); // Update HTML result state
     setAstroResultText(plainTextResult); // Update text result state
 
-    console.log("Generated results for:", sunSignResult, moonSignResult);
-  }
+    console.log("Generated results for:", sunSignResult, moonSignResult, risingSignResult);
+  } // <-- End of handleGenerateInsights function
 
   // --- Share Handler (Web Share API) ---
   async function handleShare() {
     if (!astroResultText) return;
-
     if (navigator.share) {
       try {
         await navigator.share({
           title: "My Astro Insights!",
-          text: astroResultText,
-          url: 'https://ive-got-a-sign.baatcheetpodcast.com/' // Share the main URL
+          text: astroResultText // Sharing text only now
         });
         console.log('Result shared successfully');
       } catch (error) {
@@ -163,7 +173,6 @@ function App() {
   // --- Copy Text Handler ---
   async function handleCopyText() {
       if (!astroResultText) return;
-
       if (navigator.clipboard && navigator.clipboard.writeText) {
           try {
               await navigator.clipboard.writeText(astroResultText);
@@ -182,7 +191,6 @@ function App() {
   return (
     <div className="container">
       <h1>I've Got A Sign</h1>
-
       {!session ? (
         /* --- Logged Out View --- */
         <section id="login-section">
@@ -204,17 +212,25 @@ function App() {
           )}
           <p>Logged in as: {userProfile?.full_name || userProfile?.name || session.user.email}</p>
 
+          {/* Input Section */}
           <div className="dob-section">
-            <label htmlFor="dob">Enter your Date of Birth:</label>
-            <input
-              type="date"
-              id="dob"
-              value={dob}
-              onChange={(e) => setDob(e.target.value)}
-              required
-            />
-            <button onClick={handleGenerateInsights}>Generate Astro Insights</button>
+            <div>
+              <label htmlFor="dob">Date of Birth:</label>
+              <input type="date" id="dob" value={dob} onChange={(e) => setDob(e.target.value)} required />
+            </div>
+            <div style={{ marginTop: '10px' }}>
+              <label htmlFor="tob">Time of Birth (approx):</label>
+              <input type="time" id="tob" value={birthTime} onChange={(e) => setBirthTime(e.target.value)} required />
+            </div>
+            <div style={{ marginTop: '10px' }}>
+              <label htmlFor="pob">Place of Birth (City, Country):</label>
+              <input type="text" id="pob" value={birthLocation} onChange={(e) => setBirthLocation(e.target.value)} placeholder="e.g., Kolkata, India" required />
+            </div>
+            <button onClick={handleGenerateInsights} style={{ marginTop: '15px' }}>
+              Generate Astro Insights
+            </button>
           </div>
+          {/* End of Input Section */}
 
           {/* Display Astro Result and Share Buttons */}
           {astroResult && (

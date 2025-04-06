@@ -1,5 +1,6 @@
+// src/astroUtils.js
+
 // --- Astro Data and Logic ---
-// Placed outside the component function for better organization
 
 const zodiacSignsData = [
     // NOTE: Dates are MM-DD format for easier comparison
@@ -24,7 +25,7 @@ const moonSigns = [
     'Gemini', 'Cancer'
 ];
 
-// Motivational Messages
+// Motivational Messages (Including placeholder Rising signs)
 const messages = {
     sun: {
         aries: "Your courage and initiative will help you conquer new challenges this week!",
@@ -53,16 +54,31 @@ const messages = {
         taurus: "Appreciate life's simple pleasures - they're your strength.",
         gemini: "Clear communication resolves all conflicts.",
         cancer: "Nurture your connections - they're your foundation."
-    }
+    },
+    // Placeholder Rising Sign messages - ADD REAL ONES LATER!
+    rising: {
+         aries: "You approach the world with directness and energy!",
+         taurus: "You present a calm, steady, and reliable face to the world.",
+         gemini: "You come across as curious, communicative, and adaptable.",
+         cancer: "You seem nurturing, sensitive, and perhaps a bit cautious initially.",
+         leo: "You radiate warmth, confidence, and a touch of drama.",
+         virgo: "You appear analytical, helpful, and perhaps a bit reserved.",
+         libra: "You seem charming, diplomatic, and focused on fairness.",
+         scorpio: "You project intensity, depth, and a sense of mystery.",
+         sagittarius: "You come across as optimistic, adventurous, and freedom-loving.",
+         capricorn: "You appear responsible, ambitious, and composed.",
+         aquarius: "You seem unique, independent, and forward-thinking.",
+         pisces: "You project sensitivity, empathy, and perhaps a dreamy quality."
+     }
 };
 
 // Function to get Sun Sign
 function getSunSign(dob) {
-    if (!(dob instanceof Date) || isNaN(dob)) return 'Unknown';
+    if (!(dob instanceof Date) || isNaN(dob.getTime())) return 'Unknown';
     const month = dob.getMonth() + 1;
     const day = dob.getDate();
     // Format month and day to MM-DD for string comparison
-    const monthDay = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const monthDay = `${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`; 
 
     for (const signInfo of zodiacSignsData) {
         // Handle Capricorn separately due to year wrap-around
@@ -81,7 +97,7 @@ function getSunSign(dob) {
 
 // Function to get Moon Sign (Simplified version from original logic)
 function getMoonSign(dob) {
-    if (!(dob instanceof Date) || isNaN(dob)) return 'Unknown';
+    if (!(dob instanceof Date) || isNaN(dob.getTime())) return 'Unknown';
     // Calculate day of the year (1-366)
     const startOfYear = new Date(dob.getFullYear(), 0, 0);
     const diff = dob.getTime() - startOfYear.getTime(); // Use getTime() for accurate difference
@@ -92,7 +108,22 @@ function getMoonSign(dob) {
     return moonSigns[(dayOfYear - 1) % 12];
 }
 
-// --- End of Astro Data and Logic ---
+// --- TODO: Add getRisingSign function here ---
+// This will require installing and using an astrology library
+// It will need dob, birthTime, latitude, longitude, timezoneOffset as input
+// Example structure:
+// import { SomeAstroLib } from 'some-astro-lib';
+// function getRisingSign(dateObject, timeString, lat, lon, tzOffset) {
+//    // 1. Parse timeString (HH:MM)
+//    // 2. Combine dateObject and parsed time, adjust for tzOffset to get UTC
+//    // 3. Use SomeAstroLib.calculateAscendant(utcDateTime, lat, lon);
+//    // 4. Return the sign name
+//    return 'Leo'; // Placeholder
+// }
+// --- End of TODO ---
 
-// Add this at the end of src/astroUtils.js
+
+// Export the functions and messages needed by App.jsx
 export { getSunSign, getMoonSign, messages };
+
+// We don't export getRisingSign yet until it's implemented
